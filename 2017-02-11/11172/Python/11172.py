@@ -6,7 +6,7 @@ answers = []
 def main():
     start_time = time.time()           
     def loadFile():
-        f = open('./11172.in', 'r')
+        f = open('./../11172.in', 'r')
         num_problems = int(f.readline())
         for i in range(num_problems):
             line = f.readline()
