@@ -1,3 +1,8 @@
+/*
+ * Problem link: https://www.hackerearth.com/practice/algorithms/graphs/graph-representation/practice-problems/algorithm/monk-at-the-graph-factory/description/
+ * @author Valentina Chacon Buitrago
+/**/
+
 #include <iostream>
 using namespace std; 
 int main() {
