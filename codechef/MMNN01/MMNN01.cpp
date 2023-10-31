@@ -1,281 +1,197 @@
-#ifdef DEBUG
-#define _GLIBCXX_DEBUG
-#endif
-#pragma GCC optimize("O3")
-#include <bits/stdc++.h>
-using namespace std;
-typedef double ld;
-typedef long long ll;
-const int mod = (int)1e9 + 7;
+#include <cstdio>
+#include <cstdlib>
+#include <ctime>
+#include <chrono>
+#define ll long long int
+#define maxk 20
+#define maxn 1048576
+#define p1 101711873
+#define p2 104857601
+#define p3 111149057
+#define g1 78093862
+#define g2 79427530
+#define g3 85311531
+#define g1inv 87893216
+#define g2inv 8583183
+#define g3inv 62001082
+#define inv2p1 50855937
+#define inv2p2 52428801
+#define inv2p3 55574529
+#define pm 1000000007
+#define c1 34952567
+#define c2 32933262
 
-// thank tourist
+int rev[maxn];
+void prrev(){
+	rev[0]=0;
+	rev[1]=1;
+	for(int lg=2;lg<maxn;lg<<=1){
+		for(int i=0;i<lg;++i)
+			rev[i]<<=1;
+		for(int i=0;i<lg;++i)
+			rev[i+lg]=rev[i]^1;
+	}
+}
+int xinv(int x){
+	int s=1;
+	ll dx=x;
+	for(int os=pm-2;os;os>>=1){
+		if(os&1)s=(s*dx)%pm;
+		dx=(dx*dx)%pm;
+	}
+	return s;
+}
 
-namespace fft {
-    typedef double dbl;
-    struct num {
-        dbl x, y;
-        num() { x = y = 0; }
-        num(dbl x_, dbl y_) : x(x_), y(y_) {}
-    };
-    inline num operator+(num a, num b) { return num(a.x + b.x, a.y + b.y); }
-    inline num operator-(num a, num b) { return num(a.x - b.x, a.y - b.y); }
-    inline num operator*(num a, num b) { return num(a.x * b.x - a.y * b.y, a.x * b.y + a.y * b.x); }
-    inline num conj(num a) { return num(a.x, -a.y); }
-    int base = 1;
-    vector<num> roots = {{0, 0}, {1, 0}};
-    vector<int> rev = {0, 1};
-    const dbl PI = static_cast<dbl>(acosl(-1.0));
-    void ensure_base(int nbase) {
-        if (nbase <= base) {
-            return;
-        }
-        rev.resize(1 << nbase);
-        for (int i = 0; i < (1 << nbase); i++) {
-            rev[i] = (rev[i >> 1] >> 1) + ((i & 1) << (nbase - 1));
-        }
-        roots.resize(1 << nbase);
-        while (base < nbase) {
-            dbl angle = 2 * PI / (1 << (base + 1));
-//      num z(cos(angle), sin(angle));
-            for (int i = 1 << (base - 1); i < (1 << base); i++) {
-                roots[i << 1] = roots[i];
-//        roots[(i << 1) + 1] = roots[i] * z;
-                dbl angle_i = angle * (2 * i + 1 - (1 << base));
-                roots[(i << 1) + 1] = num(cos(angle_i), sin(angle_i));
-            }
-            base++;
-        }
-    }
-    void fft(vector<num>& a, int n = -1) {
-        if (n == -1) {
-            n = (int) a.size();
-        }
-        assert((n & (n - 1)) == 0);
-        int zeros = __builtin_ctz(n);
-        ensure_base(zeros);
-        int shift = base - zeros;
-        for (int i = 0; i < n; i++) {
-            if (i < (rev[i] >> shift)) {
-                swap(a[i], a[rev[i] >> shift]);
-            }
-        }
-        for (int k = 1; k < n; k <<= 1) {
-            for (int i = 0; i < n; i += 2 * k) {
-                for (int j = 0; j < k; j++) {
-                    num z = a[i + j + k] * roots[j + k];
-                    a[i + j + k] = a[i + j] - z;
-                    a[i + j] = a[i + j] + z;
-                }
-            }
-        }
-    }
-    vector<num> fa, fb;
-    vector<int64_t> square(const vector<int>& a) {
-        if (a.empty()) {
-            return {};
-        }
-        int need = (int) a.size() + (int) a.size() - 1;
-        int nbase = 1;
-        while ((1 << nbase) < need) nbase++;
-        ensure_base(nbase);
-        int sz = 1 << nbase;
-        if ((sz >> 1) > (int) fa.size()) {
-            fa.resize(sz >> 1);
-        }
-        for (int i = 0; i < (sz >> 1); i++) {
-            int x = (2 * i < (int) a.size() ? a[2 * i] : 0);
-            int y = (2 * i + 1 < (int) a.size() ? a[2 * i + 1] : 0);
-            fa[i] = num(x, y);
-        }
-        fft(fa, sz >> 1);
-        num r(1.0 / (sz >> 1), 0.0);
-        for (int i = 0; i <= (sz >> 2); i++) {
-            int j = ((sz >> 1) - i) & ((sz >> 1) - 1);
-            num fe = (fa[i] + conj(fa[j])) * num(0.5, 0);
-            num fo = (fa[i] - conj(fa[j])) * num(0, -0.5);
-            num aux = fe * fe + fo * fo * roots[(sz >> 1) + i] * roots[(sz >> 1) + i];
-            num tmp = fe * fo;
-            fa[i] = r * (conj(aux) + num(0, 2) * conj(tmp));
-            fa[j] = r * (aux + num(0, 2) * tmp);
-        }
-        fft(fa, sz >> 1);
-        vector<int64_t> res(need);
-        for (int i = 0; i < need; i++) {
-            res[i] = llround(i % 2 == 0 ? fa[i >> 1].x : fa[i >> 1].y);
-        }
-        return res;
-    }
-    vector<int64_t> multiply(const vector<int>& a, const vector<int>& b) {
-        if (a.empty() || b.empty()) {
-            return {};
-        }
-        if (a == b) {
-            return square(a);
-        }
-        int need = (int) a.size() + (int) b.size() - 1;
-        int nbase = 1;
-        while ((1 << nbase) < need) nbase++;
-        ensure_base(nbase);
-        int sz = 1 << nbase;
-        if (sz > (int) fa.size()) {
-            fa.resize(sz);
-        }
-        for (int i = 0; i < sz; i++) {
-            int x = (i < (int) a.size() ? a[i] : 0);
-            int y = (i < (int) b.size() ? b[i] : 0);
-            fa[i] = num(x, y);
-        }
-        fft(fa, sz);
-        num r(0, -0.25 / (sz >> 1));
-        for (int i = 0; i <= (sz >> 1); i++) {
-            int j = (sz - i) & (sz - 1);
-            num z = (fa[j] * fa[j] - conj(fa[i] * fa[i])) * r;
-            fa[j] = (fa[i] * fa[i] - conj(fa[j] * fa[j])) * r;
-            fa[i] = z;
-        }
-        for (int i = 0; i < (sz >> 1); i++) {
-            num A0 = (fa[i] + fa[i + (sz >> 1)]) * num(0.5, 0);
-            num A1 = (fa[i] - fa[i + (sz >> 1)]) * num(0.5, 0) * roots[(sz >> 1) + i];
-            fa[i] = A0 + A1 * num(0, 1);
-        }
-        fft(fa, sz >> 1);
-        vector<int64_t> res(need);
-        for (int i = 0; i < need; i++) {
-            res[i] = llround(i % 2 == 0 ? fa[i >> 1].x : fa[i >> 1].y);
-        }
-        return res;
-    }
-    vector<int> multiply_mod(const vector<int>& a, const vector<int>& b, int m) {
-        if (a.empty() || b.empty()) {
-            return {};
-        }
-        int eq = (a.size() == b.size() && a == b);
-        int need = (int) a.size() + (int) b.size() - 1;
-        int nbase = 0;
-        while ((1 << nbase) < need) nbase++;
-        ensure_base(nbase);
-        int sz = 1 << nbase;
-        if (sz > (int) fa.size()) {
-            fa.resize(sz);
-        }
-        for (int i = 0; i < (int) a.size(); i++) {
-            int x = (a[i] % m + m) % m;
-            fa[i] = num(x & ((1 << 15) - 1), x >> 15);
-        }
-        fill(fa.begin() + a.size(), fa.begin() + sz, num {0, 0});
-        fft(fa, sz);
-        if (sz > (int) fb.size()) {
-            fb.resize(sz);
-        }
-        if (eq) {
-            copy(fa.begin(), fa.begin() + sz, fb.begin());
-        } else {
-            for (int i = 0; i < (int) b.size(); i++) {
-                int x = (b[i] % m + m) % m;
-                fb[i] = num(x & ((1 << 15) - 1), x >> 15);
-            }
-            fill(fb.begin() + b.size(), fb.begin() + sz, num {0, 0});
-            fft(fb, sz);
-        }
-        dbl ratio = 0.25 / sz;
-        num r2(0, -1);
-        num r3(ratio, 0);
-        num r4(0, -ratio);
-        num r5(0, 1);
-        for (int i = 0; i <= (sz >> 1); i++) {
-            int j = (sz - i) & (sz - 1);
-            num a1 = (fa[i] + conj(fa[j]));
-            num a2 = (fa[i] - conj(fa[j])) * r2;
-            num b1 = (fb[i] + conj(fb[j])) * r3;
-            num b2 = (fb[i] - conj(fb[j])) * r4;
-            if (i != j) {
-                num c1 = (fa[j] + conj(fa[i]));
-                num c2 = (fa[j] - conj(fa[i])) * r2;
-                num d1 = (fb[j] + conj(fb[i])) * r3;
-                num d2 = (fb[j] - conj(fb[i])) * r4;
-                fa[i] = c1 * d1 + c2 * d2 * r5;
-                fb[i] = c1 * d2 + c2 * d1;
-            }
-            fa[j] = a1 * b1 + a2 * b2 * r5;
-            fb[j] = a1 * b2 + a2 * b1;
-        }
-        fft(fa, sz);
-        fft(fb, sz);
-        vector<int> res(need);
-        for (int i = 0; i < need; i++) {
-            int64_t aa = llround(fa[i].x);
-            int64_t bb = llround(fb[i].x);
-            int64_t cc = llround(fa[i].y);
-            res[i] = static_cast<int>((aa + ((bb % m) << 15) + ((cc % m) << 30)) % m);
-        }
-        return res;
-    }
-}  // namespace fft
+int ma[maxn];
+int mb[maxn];
+int pr1[maxn];
+int pr2[maxn];
+int pr3[maxn];
+int tra[maxn];
+int trb[maxn];
+int trc[maxn];
+int tinv[maxn];
+int cinv[maxn];
 
+void fft(int *a, int *b, int n1, int k, int p, int g){
+	int n=1<<k;
+	int vk=maxk-k;
+	for(int i=0;i<n1;++i)
+		b[rev[i]>>vk]=a[i];
+	for(int i=n1;i<n;++i)
+		b[rev[i]>>vk]=0;
+	int gen[k--];
+	gen[0]=g;
+	for(int i=0;i<k;++i)
+		gen[i+1]=(gen[i]*(ll)gen[i])%p;
+	for(int len=2;len<=n;len<<=1){
+		int gl=gen[k--];
+		int lenpola=len/2;
+		ll w=1;
+		for(int j=0;j<lenpola;++j){
+			for(int i=0;i<n;i+=len){
+				int u = b[i+j];
+				int v = (b[i+j+lenpola]*w)%p;
+				u+=v;
+				v=u-(v<<1);
+				u-=p*(u>=p);
+				v+=p*(v<0);
+				b[i+j]=u;
+				b[i+j+lenpola]=v;
+			}
+			w=(w*gl)%p;
+		}
+	}
+}
 
-int mult(int a, int b) {
-    return (1LL * a * b) % mod;
+void mul(int *a, int *b, int *c, int n1, int n2, int p, int g, int ginv, int inv2, bool cyc=false){
+	int n3=n1+n2-1;
+	if(cyc)n3=n1>n2?n1:n2;
+	int k,n;
+	for(k=0,n=1;n<n3;n<<=1,++k);
+	for(int i=k;i<maxk;++i){
+		g=(g*(ll)g)%p;
+		ginv=(ginv*(ll)ginv)%p;
+	}
+	fft(a,tra,n1,k,p,g);
+	fft(b,trb,n2,k,p,g);
+	for(int i=0;i<n;++i)
+		trc[i]=(tra[i]*(ll)trb[i])%p;
+	fft(trc,c,n,k,p,ginv);
+	int invn=inv2;
+	for(int i=1;i<k;++i)
+		invn=(invn*(ll)inv2)%p;
+	for(int i=0;i<n3;++i)
+		c[i]=(c[i]*(ll)invn)%p;
 }
-int sub(int a, int b) {
-    int s = a - b;
-    if (s < 0) s += mod;
-    return s;
+
+void mul(int *a, int *b, int *c, int n1, int n2, bool cyc=false){
+	for(int i=0;i<n1;++i) ma[i]=a[i]%p1;
+	for(int i=0;i<n2;++i) mb[i]=b[i]%p1;
+	mul(ma,mb,pr1,n1,n2,p1,g1,g1inv,inv2p1,cyc);
+	for(int i=0;i<n1;++i) ma[i]=a[i]%p2;
+	for(int i=0;i<n2;++i) mb[i]=b[i]%p2;
+	mul(ma,mb,pr2,n1,n2,p2,g2,g2inv,inv2p2,cyc);
+	for(int i=0;i<n1;++i) ma[i]=a[i]%p3;
+	for(int i=0;i<n2;++i) mb[i]=b[i]%p3;
+	mul(ma,mb,pr3,n1,n2,p3,g3,g3inv,inv2p3,cyc);
+	int n3=n1+n2-1;
+	for(int i=0;i<n3;++i){
+		int m=pr1[i];
+		int k1=pr2[i]-m;
+		k1+=p2*(k1<0);
+		k1=(k1*(ll)c1)%p2;
+		int k2=(pr3[i]-m-k1*(ll)p1)%p3;
+		k2+=p3*(k2<0);
+		k2=(k2*(ll)c2)%p3;
+		int x=(k2*(ll)p2+k1)%pm;
+		c[i]=(x*(ll)p1+m)%pm;
+	}
 }
-int pw(int a, int b) {
-    if (b == 0) return 1;
-    if (b & 1) return mult(a, pw(a, b - 1));
-    int res = pw(a, b / 2);
-    return mult(res, res);
+
+void inv(int *a, int *b, int k){
+	b[0]=xinv(a[0]);
+	b[1]=(b[0]*(ll)(b[0]))%pm;
+	b[1]=-(a[1]*(ll)b[1])%pm;
+	b[1]+=pm*(b[1]<0);
+	int n=2;
+	while(n<k)n<<=1;
+	for(int l=2;l<n;l<<=1){
+		mul(a,b,tinv,2*l,l,true);
+		mul(tinv+l,b,trb,l,l);
+		for(int i=0;i<l;++i)
+			b[i+l]=pm*(trb[i]>0)-trb[i];
+	}
 }
-int sum(int a, int b) {
-    int s = a + b;
-    if (s >= mod) s -= mod;
-    return s;
+
+void div(int *a, int *b, int *c, int n){
+	inv(b,cinv,n);
+	mul(a,cinv,c,n,n);
 }
-int n, m;
-const int maxN = 2 * (int)1e5 + 100;
-int prob[maxN];
-int g[maxN];
-int e[maxN];
-void go(int l, int r) {
-    if (l == r) {
-        e[l] = sum(e[l], sub(1, prob[l]));
-        return;
-    }
-    int mid = (l + r) / 2;
-    go(l, mid);
-    vector < int > poly1(mid - l + 1);
-    for (int i = l; i <= mid; i++) poly1[i - l] = e[i];
-    vector < int > poly2(r - l + 1);
-    for (int i = 1; i <= r - l; i++) {
-        poly2[i] = g[i];
-    }
-    auto res = fft::multiply_mod(poly1, poly2, mod);
-    for (int i = mid + 1 - l; i < res.size() && i <= r - l; i++) {
-        e[i + l] = sum(e[i + l], res[i]);
-    }
-    go(mid + 1, r);
+
+int a[maxn];
+int b[maxn];
+int c[maxn];
+
+int resi(int n, int m){
+    if(n==1)return 1;
+	c[0]=1;
+	int mi=xinv(m);
+	for(int i=1;i<n;++i){
+		c[i]=(c[i-1]*(ll)mi)%pm;
+		c[i]=(c[i]*(ll)(m-i))%pm;
+	}
+	for(int i=0;i<n;++i){
+		a[i]=(c[i]*(ll)(i+1))%pm;
+		a[i]=(a[i]*(ll)mi)%pm;
+	}
+	b[0]=0;
+	for(int i=1;i<n;++i)
+		b[i]=(b[i-1]+a[i-1])%pm;
+	for(int i=0;i<n;++i)
+		b[i]=(b[i]+c[i])%pm;
+	for(int i=n-1;i>0;--i)
+		a[i]=pm-a[i-1];
+	a[0]=1;
+	inv(a,cinv,n);
+	mul(b,cinv,c,n,n,true);
+	return c[n-1];
 }
-void solve() {
-    cin >> n >> m;
-    int inv = pw(m, mod - 2);
-    prob[1] = 1;
-    for (int i = 2; i <= n; i++) {
-        prob[i] = mult(prob[i - 1], mult(inv, sub(m, i - 1)));
-    }
-    for (int i = 1; i <= n; i++) {
-        g[i] = mult(prob[i], mult(i, inv));
-    }
-    for (int i = 0; i <= n; i++) e[i] = 0;
-    go(1, n);
-    cout << sum(e[n], 1) << '\n';
-}
-int main() {
-    ios_base::sync_with_stdio(false);
-    cin.tie(nullptr);
-    //freopen("input.txt", "r", stdin);
-    int tst;
-    cin >> tst;
-    while (tst--) solve();
-    return 0;
+
+int n[maxn];
+int m[maxn];
+
+int main(){
+	prrev();
+	
+	int t;
+	scanf("%d",&t);
+	
+	for(int i=0;i<t;++i)
+		scanf("%d %d",n+i,m+i);
+	
+	for(int i=0;i<t;++i)
+		printf("%d\n",resi(n[i],m[i]));
+		
+	return 0;
 }
